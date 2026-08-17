@@ -6,13 +6,15 @@ public sealed class LocalFileStorage(string rootPath, string publicBasePath = "/
 {
     public async Task<string> SaveAsync(FileUpload file, string folder, CancellationToken cancellationToken = default)
     {
-        var objectKey = FileStorageValidation.CreateObjectKey(file, folder);
+        FileStorageValidation.Validate(file);
+        var objectKey = FileStorageValidation.CreateObjectKey(folder);
         var destination = Path.Combine(rootPath, objectKey.Replace('/', Path.DirectorySeparatorChar));
         var directory = Path.GetDirectoryName(destination) ?? throw new InvalidOperationException("Invalid upload path.");
         Directory.CreateDirectory(directory);
 
+        await using var optimized = await ImageOptimizer.OptimizeAsync(file, cancellationToken);
         await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, true);
-        await file.Content.CopyToAsync(output, cancellationToken);
+        await optimized.CopyToAsync(output, cancellationToken);
 
         return $"{publicBasePath.TrimEnd('/')}/{objectKey}";
     }

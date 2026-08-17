@@ -21,9 +21,9 @@ A solution usa .NET 10 e mantém cinco responsabilidades diretas:
 - `Bancada.Api`: Minimal APIs, Identity, autorização, OpenAPI e composição;
 - `Bancada.Domain`: entidades e regras centrais;
 - `Bancada.Application`: contratos HTTP e a abstração pequena de arquivos;
-- `Bancada.Infrastructure`: EF Core, Npgsql, Identity, PostgreSQL e storages local/R2.
+- `Bancada.Infrastructure`: EF Core, Npgsql, Identity, PostgreSQL e storages local/Supabase.
 
-O cliente conversa com a API por REST. O banco de produção pode ser um PostgreSQL do Neon sem código específico do provedor. Imagens usam filesystem no desenvolvimento e a API compatível com S3 do Cloudflare R2 em produção. As decisões que merecem contexto adicional estão em [docs/architecture.md](docs/architecture.md).
+O cliente conversa com a API por REST. O banco de produção pode ser um PostgreSQL do Neon sem código específico do provedor. Imagens usam filesystem no desenvolvimento e o endpoint compatível com S3 do Supabase Storage em produção. As decisões que merecem contexto adicional estão em [docs/architecture.md](docs/architecture.md).
 
 ## Requisitos locais
 
@@ -67,20 +67,21 @@ Por padrão, a API usa `https://localhost:7262` e o cliente `https://localhost:7
 
 A especificação OpenAPI fica em `/openapi/v1.json` e a verificação de saúde em `/health`.
 
-## Imagens e Cloudflare R2
+## Imagens e Supabase Storage
 
-O provider padrão é `Local`, com arquivos em `src/Bancada.Api/wwwroot/uploads`. Para R2, defina:
+O provider padrão é `Local`, com arquivos em `src/Bancada.Api/wwwroot/uploads`. Em produção, crie no Supabase um bucket público chamado `bancada-images`, limite os uploads a imagens de até 1 MB, habilite o protocolo S3 em `Storage > Configuration > S3` e gere credenciais exclusivas para a API. Depois defina:
 
 ```text
-Storage__Provider=R2
-Storage__R2__AccountId=...
-Storage__R2__AccessKeyId=...
-Storage__R2__SecretAccessKey=...
-Storage__R2__BucketName=bancada-images
-Storage__R2__PublicBaseUrl=https://images.seu-dominio.com
+Storage__Provider=Supabase
+Storage__Supabase__Endpoint=https://PROJECT_REF.storage.supabase.co/storage/v1/s3
+Storage__Supabase__Region=PROJECT_REGION
+Storage__Supabase__AccessKeyId=...
+Storage__Supabase__SecretAccessKey=...
+Storage__Supabase__BucketName=bancada-images
+Storage__Supabase__PublicBaseUrl=https://PROJECT_REF.supabase.co/storage/v1/object/public/bancada-images
 ```
 
-`PublicBaseUrl` deve ser um domínio público ligado ao bucket. A aplicação valida configuração, MIME type, extensão e limite de 5 MB, e gera o nome do objeto sem reutilizar o nome enviado pelo navegador.
+Copie `Endpoint`, `Region`, `AccessKeyId` e `SecretAccessKey` da configuração S3 do projeto. A aplicação aceita JPG, PNG e WebP de até 5 MB, limita a resolução, converte para WebP com no máximo 1280 px e garante que o arquivo armazenado tenha até 1 MB. O nome do objeto é gerado pela API sem reutilizar o nome enviado pelo navegador.
 
 ## Testes e qualidade
 
@@ -125,7 +126,7 @@ A API possui um Dockerfile para build a partir da raiz do repositório:
 docker build --file src/Bancada.Api/Dockerfile --tag bancada-api .
 ```
 
-Configure no host a conexão do Neon, a origem HTTPS do frontend e as variáveis do R2. A migration deve ser aplicada como uma etapa controlada do deploy antes de iniciar a nova versão da API. O workflow em `.github/workflows/ci.yml` executa restore, build e testes em pushes e pull requests para `main`.
+Configure no host a conexão do Neon, a origem HTTPS do frontend e as variáveis do Supabase Storage. A migration deve ser aplicada como uma etapa controlada do deploy antes de iniciar a nova versão da API. O workflow em `.github/workflows/ci.yml` executa restore, build e testes em pushes e pull requests para `main`.
 
 ## Fora do MVP
 

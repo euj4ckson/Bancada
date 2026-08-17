@@ -18,7 +18,7 @@ PostgreSQL is accessed through EF Core and Npgsql. There is no generic repositor
 
 ## Replaceable image storage
 
-`IFileStorage` is a small application boundary with filesystem and Cloudflare R2 implementations. Development uses local files. R2 uses its S3-compatible API and a separately configured public base URL; the domain stores only the resulting URL.
+`IFileStorage` is a small application boundary with filesystem and S3-compatible implementations. Development uses local files. Production uses Supabase Storage through its S3 endpoint and a separately configured public base URL; the domain stores only the resulting URL. Images are normalized to WebP before storage so provider quotas remain predictable.
 
 ## Tests use a relational substitute
 

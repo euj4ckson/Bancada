@@ -68,9 +68,14 @@ builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Sto
 builder.Services.AddScoped<IFileStorage>(services =>
 {
     var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<StorageOptions>>().Value;
-    if (string.Equals(options.Provider, "R2", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(options.Provider, "Supabase", StringComparison.OrdinalIgnoreCase))
     {
-        return new R2FileStorage(options.R2);
+        return new S3FileStorage(options.Supabase);
+    }
+
+    if (!string.Equals(options.Provider, "Local", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException($"Unsupported storage provider '{options.Provider}'.");
     }
 
     var environment = services.GetRequiredService<IWebHostEnvironment>();

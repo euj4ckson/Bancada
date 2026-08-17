@@ -1,7 +1,7 @@
 <div class="image-uploader">
     <label for="cover-image">Foto do prato</label>
     <InputFile id="cover-image" OnChange="SelectFile" accept="image/jpeg,image/png,image/webp" />
-    <small>JPG, PNG ou WebP, até 5 MB. A foto pode ser adicionada ou trocada depois.</small>
+    <small>JPG, PNG ou WebP, até 5 MB. A imagem será otimizada automaticamente.</small>
     @if (_fileName is not null)
     {
         <p class="selected-file">Selecionada: @_fileName</p>

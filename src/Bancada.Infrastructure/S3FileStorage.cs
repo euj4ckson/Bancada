@@ -5,34 +5,36 @@ using Bancada.Application;
 
 namespace Bancada.Infrastructure;
 
-public sealed class R2FileStorage : IFileStorage, IDisposable
+public sealed class S3FileStorage : IFileStorage, IDisposable
 {
-    private readonly R2Options _options;
+    private readonly SupabaseStorageOptions _options;
     private readonly AmazonS3Client _client;
 
-    public R2FileStorage(R2Options options)
+    public S3FileStorage(SupabaseStorageOptions options)
     {
+        options.Validate();
         _options = options;
         var credentials = new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey);
         _client = new AmazonS3Client(credentials, new AmazonS3Config
         {
-            ServiceURL = $"https://{options.AccountId}.r2.cloudflarestorage.com",
-            AuthenticationRegion = "auto",
+            ServiceURL = options.Endpoint,
+            AuthenticationRegion = options.Region,
             ForcePathStyle = true
         });
     }
 
     public async Task<string> SaveAsync(FileUpload file, string folder, CancellationToken cancellationToken = default)
     {
-        var objectKey = FileStorageValidation.CreateObjectKey(file, folder);
+        FileStorageValidation.Validate(file);
+        var objectKey = FileStorageValidation.CreateObjectKey(folder);
+        await using var optimized = await ImageOptimizer.OptimizeAsync(file, cancellationToken);
         var request = new PutObjectRequest
         {
             BucketName = _options.BucketName,
             Key = objectKey,
-            InputStream = file.Content,
-            ContentType = file.ContentType,
-            DisablePayloadSigning = true,
-            DisableDefaultChecksumValidation = true
+            InputStream = optimized,
+            ContentType = "image/webp",
+            AutoCloseStream = false
         };
 
         await _client.PutObjectAsync(request, cancellationToken);
