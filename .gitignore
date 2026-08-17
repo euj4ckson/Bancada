@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.vs/
+.vscode/
+.idea/
+TestResults/
+artifacts/
+coverage/
+src/Bancada.Api/wwwroot/uploads/
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
