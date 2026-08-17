@@ -1,0 +1,8 @@
+namespace Bancada.Domain;
+
+public enum ChallengeStatus
+{
+    Draft = 1,
+    Active = 2,
+    Closed = 3
+}
