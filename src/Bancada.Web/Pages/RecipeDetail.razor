@@ -1,0 +1,193 @@
+@page "/receitas/{Id:guid}"
+@inject ApiClient Api
+
+<PageTitle>@(_recipe?.Title ?? "Receita") — Bancada</PageTitle>
+
+@if (_loading)
+{
+    <section class="page-shell"><LoadingBlock /></section>
+}
+else if (_error is not null || _recipe is null)
+{
+    <section class="page-shell"><EmptyState Eyebrow="NÃO ENCONTRADA" Title="Esta receita não está na bancada." Description="Ela pode ter sido removida ou ainda não foi publicada." ActionHref="/explorar" ActionText="Explorar receitas" /></section>
+}
+else
+{
+    <article class="recipe-detail">
+        <header class="page-shell recipe-hero">
+            <div class="recipe-hero-copy">
+                <p class="eyebrow">RECEITA DE <a href="@($"/perfil/{_recipe.AuthorId}")">@_recipe.AuthorDisplayName.ToUpperInvariant()</a></p>
+                <h1>@_recipe.Title</h1>
+                <p class="recipe-lead">@_recipe.Description</p>
+                <div class="detail-meta" aria-label="Informações da receita">
+                    <span><strong>@_recipe.PreparationTimeMinutes</strong> minutos</span>
+                    <span><strong>@_recipe.Servings</strong> porções</span>
+                    <span><strong>@RecipeCard.DifficultyLabel(_recipe.Difficulty)</strong> dificuldade</span>
+                </div>
+                <div class="detail-actions">
+                    @if (_authenticated)
+                    {
+                        <button class="button @(_recipe.IsFavorite ? "accent" : "ghost")" type="button" @onclick="ToggleFavoriteAsync">
+                            @(_recipe.IsFavorite ? "Salva nos favoritos" : "Salvar receita")
+                        </button>
+                    }
+                    else
+                    {
+                        <a class="button ghost" href="@($"/entrar?returnUrl=/receitas/{Id}")">Entrar para salvar</a>
+                    }
+                    @if (_isOwner)
+                    {
+                        <a class="text-link" href="@($"/receitas/{Id}/editar")">Editar receita</a>
+                    }
+                </div>
+            </div>
+            <div class="recipe-hero-image">
+                @if (!string.IsNullOrWhiteSpace(_recipe.CoverImageUrl))
+                {
+                    <img src="@_recipe.CoverImageUrl" alt="@_recipe.Title" />
+                }
+                else
+                {
+                    <span class="image-placeholder large" aria-hidden="true">B</span>
+                }
+            </div>
+        </header>
+
+        <div class="page-shell recipe-content">
+            <aside class="ingredient-list">
+                <p class="eyebrow">PARA SEPARAR</p>
+                <h2>Ingredientes</h2>
+                <ul>
+                    @foreach (var ingredient in _recipe.Ingredients)
+                    {
+                        <li>
+                            <span>@ingredient.Name @if (!string.IsNullOrWhiteSpace(ingredient.Notes)) { <small>@ingredient.Notes</small> }</span>
+                            <strong>@ingredient.Quantity @ingredient.Unit</strong>
+                        </li>
+                    }
+                </ul>
+            </aside>
+            <section class="instructions">
+                <p class="eyebrow">MÃOS À OBRA</p>
+                <h2>Modo de preparo</h2>
+                @foreach (var paragraph in _recipe.Instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    <p>@paragraph</p>
+                }
+            </section>
+        </div>
+
+        <section class="comments-section">
+            <div class="page-shell narrow">
+                <header class="section-heading compact-heading">
+                    <h2>Conversa na cozinha</h2>
+                    <span>@_comments.Count comentário@(_comments.Count == 1 ? null : "s")</span>
+                </header>
+                @if (_authenticated)
+                {
+                    <EditForm Model="_comment" OnValidSubmit="AddCommentAsync" class="comment-form">
+                        <DataAnnotationsValidator />
+                        <div class="field">
+                            <label for="comment">Deixe uma observação ou conte como ficou</label>
+                            <InputTextArea id="comment" @bind-Value="_comment.Content" rows="3" />
+                            <ValidationMessage For="() => _comment.Content" />
+                        </div>
+                        @if (_commentError is not null) { <p class="form-error" role="alert">@_commentError</p> }
+                        <button class="button primary" type="submit" disabled="@_postingComment">Comentar</button>
+                    </EditForm>
+                }
+                else
+                {
+                    <p class="signin-note"><a href="@($"/entrar?returnUrl=/receitas/{Id}")">Entre</a> para participar da conversa.</p>
+                }
+
+                @if (_comments.Count == 0)
+                {
+                    <p class="quiet-empty">Ainda não há comentários. Se você cozinhar, volte para contar.</p>
+                }
+                else
+                {
+                    <div class="comment-list">
+                        @foreach (var comment in _comments)
+                        {
+                            <article class="comment">
+                                <div class="avatar-placeholder" aria-hidden="true">@comment.UserDisplayName[0]</div>
+                                <div>
+                                    <header><a href="@($"/perfil/{comment.UserId}")">@comment.UserDisplayName</a><time datetime="@comment.CreatedAt.ToString("O")">@comment.CreatedAt.ToString("dd/MM/yyyy")</time></header>
+                                    <p>@comment.Content</p>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+    </article>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+    private RecipeDetailResponse? _recipe;
+    private IReadOnlyList<CommentResponse> _comments = [];
+    private readonly CommentForm _comment = new();
+    private bool _loading = true;
+    private bool _authenticated;
+    private bool _isOwner;
+    private bool _postingComment;
+    private string? _error;
+    private string? _commentError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        try
+        {
+            var auth = await AuthenticationStateTask;
+            _authenticated = auth.User.Identity?.IsAuthenticated == true;
+            _recipe = await Api.GetRecipeAsync(Id);
+            _isOwner = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == _recipe.AuthorId.ToString();
+            _comments = await Api.GetCommentsAsync(Id);
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleFavoriteAsync()
+    {
+        await Api.SetFavoriteAsync(Id, !_recipe!.IsFavorite);
+        _recipe = _recipe with { IsFavorite = !_recipe.IsFavorite };
+    }
+
+    private async Task AddCommentAsync()
+    {
+        _postingComment = true;
+        _commentError = null;
+        try
+        {
+            await Api.AddCommentAsync(Id, new CommentRequest(_comment.Content));
+            _comment.Content = string.Empty;
+            _comments = await Api.GetCommentsAsync(Id);
+        }
+        catch (ApiException exception)
+        {
+            _commentError = exception.Message;
+        }
+        finally
+        {
+            _postingComment = false;
+        }
+    }
+
+    private sealed class CommentForm
+    {
+        [Required(ErrorMessage = "Escreva seu comentário."), MinLength(2, ErrorMessage = "Escreva um pouco mais."), MaxLength(1000)]
+        public string Content { get; set; } = string.Empty;
+    }
+}

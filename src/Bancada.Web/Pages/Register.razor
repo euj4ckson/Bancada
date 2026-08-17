@@ -1,0 +1,77 @@
+@page "/criar-conta"
+@inject BancadaAuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Criar conta — Bancada</PageTitle>
+
+<section class="auth-page page-shell">
+    <div class="auth-copy">
+        <p class="eyebrow">SUA BANCADA</p>
+        <h1>Um canto para as receitas que merecem repeteco.</h1>
+        <p>Publique do seu jeito, salve boas ideias e cozinhe os desafios da comunidade.</p>
+    </div>
+    <div class="auth-form-panel">
+        <EditForm Model="_model" OnValidSubmit="SubmitAsync">
+            <DataAnnotationsValidator />
+            <div class="field">
+                <label for="display-name">Como devemos chamar você?</label>
+                <InputText id="display-name" @bind-Value="_model.DisplayName" autocomplete="name" />
+                <ValidationMessage For="() => _model.DisplayName" />
+            </div>
+            <div class="field">
+                <label for="email">E-mail</label>
+                <InputText id="email" @bind-Value="_model.Email" autocomplete="email" />
+                <ValidationMessage For="() => _model.Email" />
+            </div>
+            <div class="field">
+                <label for="password">Senha</label>
+                <InputText id="password" type="password" @bind-Value="_model.Password" autocomplete="new-password" />
+                <small>Use 8 caracteres ou mais, com letra maiúscula e número.</small>
+                <ValidationMessage For="() => _model.Password" />
+            </div>
+            @if (_error is not null)
+            {
+                <p class="form-error" role="alert">@_error</p>
+            }
+            <button class="button primary full" type="submit" disabled="@_submitting">@(_submitting ? "Criando…" : "Criar conta")</button>
+        </EditForm>
+        <p class="auth-alternate">Já tem uma conta? <a href="/entrar">Entre por aqui</a>.</p>
+    </div>
+</section>
+
+@code {
+    private readonly RegisterForm _model = new();
+    private bool _submitting;
+    private string? _error;
+
+    private async Task SubmitAsync()
+    {
+        _submitting = true;
+        _error = null;
+        try
+        {
+            await AuthState.RegisterAsync(new RegisterRequest(_model.Email, _model.Password, _model.DisplayName));
+            Navigation.NavigateTo("/perfil");
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private sealed class RegisterForm
+    {
+        [Required(ErrorMessage = "Informe seu nome."), MinLength(2, ErrorMessage = "Use pelo menos 2 caracteres.")]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe seu e-mail."), EmailAddress(ErrorMessage = "Digite um e-mail válido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Crie uma senha."), MinLength(8, ErrorMessage = "Use pelo menos 8 caracteres.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

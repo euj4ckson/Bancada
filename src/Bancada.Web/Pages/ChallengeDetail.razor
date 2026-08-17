@@ -1,0 +1,158 @@
+@page "/desafios/{Id:guid}"
+@inject ApiClient Api
+
+<PageTitle>@(_challenge?.Title ?? "Desafio") — Bancada</PageTitle>
+
+@if (_loading)
+{
+    <section class="page-shell"><LoadingBlock /></section>
+}
+else if (_challenge is null)
+{
+    <section class="page-shell"><EmptyState Title="Este desafio não foi encontrado." ActionHref="/desafios" ActionText="Ver desafios" /></section>
+}
+else
+{
+    <header class="challenge-detail-hero">
+        <div class="page-shell challenge-detail-inner">
+            <div>
+                <p class="eyebrow light">@(_challenge.Status == ChallengeStatus.Active ? "DESAFIO EM ANDAMENTO" : "DESAFIO ENCERRADO")</p>
+                <h1>@_challenge.Title</h1>
+                <p>@_challenge.Description</p>
+                <div class="challenge-period">@_challenge.StartsAt.ToString("dd/MM/yyyy") — @_challenge.EndsAt.ToString("dd/MM/yyyy")</div>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_challenge.CoverImageUrl))
+            {
+                <img src="@_challenge.CoverImageUrl" alt="Ingredientes do desafio @_challenge.Title" />
+            }
+        </div>
+    </header>
+
+    <main class="page-shell challenge-detail-content">
+        <section class="challenge-rules">
+            <p class="eyebrow">O QUE PRECISA TER</p>
+            <h2>Ingredientes obrigatórios</h2>
+            <ul>
+                @foreach (var ingredient in _challenge.RequiredIngredients) { <li>@ingredient</li> }
+            </ul>
+            <p>A receita enviada precisa estar publicada e conter todos os itens acima.</p>
+        </section>
+
+        @if (_challenge.Status == ChallengeStatus.Active)
+        {
+            <section class="submission-form-panel">
+                <p class="eyebrow">PARTICIPAR</p>
+                <h2>Leve uma receita para o desafio</h2>
+                @if (!_authenticated)
+                {
+                    <p>Entre para escolher uma receita da sua bancada.</p>
+                    <a class="button primary" href="@($"/entrar?returnUrl=/desafios/{Id}")">Entrar para participar</a>
+                }
+                else if (_ownRecipes.Count == 0)
+                {
+                    <p>Você precisa ter uma receita publicada antes de participar.</p>
+                    <a class="button primary" href="/publicar">Publicar receita</a>
+                }
+                else
+                {
+                    <div class="field">
+                        <label for="submission-recipe">Sua receita</label>
+                        <select id="submission-recipe" @bind="_selectedRecipeId">
+                            <option value="@Guid.Empty">Escolha uma receita</option>
+                            @foreach (var recipe in _ownRecipes) { <option value="@recipe.Id">@recipe.Title</option> }
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="submission-note">Conte sua ideia <span>(opcional)</span></label>
+                        <textarea id="submission-note" @bind="_submissionDescription" rows="3"></textarea>
+                    </div>
+                    @if (_submissionMessage is not null) { <p class="@(_submissionSuccess ? "form-success" : "form-error")" role="status">@_submissionMessage</p> }
+                    <button class="button primary" type="button" disabled="@_submitting" @onclick="SubmitAsync">Enviar para o desafio</button>
+                }
+            </section>
+        }
+    </main>
+
+    <section class="challenge-gallery">
+        <div class="page-shell section-block">
+            <header class="section-heading"><div><p class="eyebrow">PRATOS NA MESA</p><h2>Participações</h2></div><span>@_challenge.Submissions.Count</span></header>
+            @if (_challenge.Submissions.Count == 0)
+            {
+                <p class="quiet-empty">Ainda não há participações. O primeiro prato pode ser o seu.</p>
+            }
+            else
+            {
+                <div class="submission-grid">
+                    @foreach (var item in _challenge.Submissions)
+                    {
+                        <article>
+                            <a href="@($"/receitas/{item.RecipeId}")">
+                                @if (!string.IsNullOrWhiteSpace(item.RecipeImageUrl)) { <img src="@item.RecipeImageUrl" alt="@item.RecipeTitle" loading="lazy" /> }
+                                <h3>@item.RecipeTitle</h3>
+                            </a>
+                            <p>por <a href="@($"/perfil/{item.UserId}")">@item.UserDisplayName</a></p>
+                            @if (!string.IsNullOrWhiteSpace(item.Description)) { <blockquote>@item.Description</blockquote> }
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+    private ChallengeDetailResponse? _challenge;
+    private IReadOnlyList<RecipeCardResponse> _ownRecipes = [];
+    private Guid _selectedRecipeId;
+    private string? _submissionDescription;
+    private string? _submissionMessage;
+    private bool _submissionSuccess;
+    private bool _authenticated;
+    private bool _submitting;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        try
+        {
+            var auth = await AuthenticationStateTask;
+            _authenticated = auth.User.Identity?.IsAuthenticated == true;
+            _challenge = await Api.GetChallengeAsync(Id);
+            if (_authenticated)
+            {
+                var profile = await Api.GetCurrentProfileAsync();
+                _ownRecipes = profile.Recipes.Where(recipe => recipe.IsPublished).ToList();
+            }
+        }
+        catch (ApiException) { _challenge = null; }
+        finally { _loading = false; }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_selectedRecipeId == Guid.Empty)
+        {
+            _submissionMessage = "Escolha uma receita.";
+            _submissionSuccess = false;
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            await Api.SubmitChallengeAsync(Id, new ChallengeSubmissionRequest(_selectedRecipeId, _submissionDescription));
+            _submissionMessage = "Receita enviada para o desafio.";
+            _submissionSuccess = true;
+            _challenge = await Api.GetChallengeAsync(Id);
+        }
+        catch (ApiException exception)
+        {
+            _submissionMessage = exception.Message;
+            _submissionSuccess = false;
+        }
+        finally { _submitting = false; }
+    }
+}

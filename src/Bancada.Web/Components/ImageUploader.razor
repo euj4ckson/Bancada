@@ -1,0 +1,29 @@
+<div class="image-uploader">
+    <label for="cover-image">Foto do prato</label>
+    <InputFile id="cover-image" OnChange="SelectFile" accept="image/jpeg,image/png,image/webp" />
+    <small>JPG, PNG ou WebP, até 5 MB. A foto pode ser adicionada ou trocada depois.</small>
+    @if (_fileName is not null)
+    {
+        <p class="selected-file">Selecionada: @_fileName</p>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<IBrowserFile> OnSelected { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+    private string? _fileName;
+
+    private async Task SelectFile(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file.Size > 5 * 1024 * 1024 || file.ContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+        {
+            _fileName = null;
+            await OnError.InvokeAsync("Escolha uma imagem JPG, PNG ou WebP de até 5 MB.");
+            return;
+        }
+
+        _fileName = file.Name;
+        await OnSelected.InvokeAsync(file);
+    }
+}

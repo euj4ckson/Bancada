@@ -1,0 +1,53 @@
+@page "/caixa-misteriosa"
+@inject ApiClient Api
+
+<PageTitle>Caixa Misteriosa — Bancada</PageTitle>
+
+<section class="mystery-page">
+    <div class="page-shell mystery-inner">
+        <header>
+            <p class="eyebrow light">CAIXA MISTERIOSA</p>
+            <h1>Quatro ingredientes.<br />Uma boa desculpa para improvisar.</h1>
+            <p>O sorteio não fica salvo. Anote a combinação se ela render uma ideia.</p>
+        </header>
+
+        <div class="mystery-box" aria-live="polite">
+            @if (_loading)
+            {
+                <LoadingBlock />
+            }
+            else if (_result is not null)
+            {
+                <ol>
+                    @foreach (var ingredient in _result.Ingredients)
+                    {
+                        <li>@ingredient</li>
+                    }
+                </ol>
+                <p>@_result.Prompt</p>
+            }
+            else
+            {
+                <p>Não conseguimos abrir a caixa agora.</p>
+            }
+        </div>
+
+        <button class="button light" type="button" disabled="@_loading" @onclick="DrawAsync">@(_loading ? "Sorteando…" : "Sortear novamente")</button>
+        <a class="text-link light-link" href="/explorar">Voltar para as receitas</a>
+    </div>
+</section>
+
+@code {
+    private MysteryBoxResponse? _result;
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => DrawAsync();
+
+    private async Task DrawAsync()
+    {
+        _loading = true;
+        try { _result = await Api.GetMysteryBoxAsync(); }
+        catch (ApiException) { _result = null; }
+        finally { _loading = false; }
+    }
+}

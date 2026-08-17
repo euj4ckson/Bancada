@@ -1,0 +1,67 @@
+@page "/favoritos"
+@attribute [Authorize]
+@inject ApiClient Api
+
+<PageTitle>Favoritos — Bancada</PageTitle>
+
+<section class="page-shell page-heading">
+    <p class="eyebrow">GUARDADAS PARA DEPOIS</p>
+    <h1>Favoritos</h1>
+    <p>As receitas que você quis manter por perto.</p>
+</section>
+
+<section class="page-shell section-block topless">
+    @if (_loading)
+    {
+        <LoadingBlock />
+    }
+    else if (_error is not null)
+    {
+        <EmptyState Title="Não foi possível abrir seus favoritos." Description="Tente novamente em alguns instantes." />
+    }
+    else if (_favorites?.Items.Count == 0)
+    {
+        <EmptyState Title="Nenhuma receita salva." Description="Ao encontrar algo que queira cozinhar, use o marcador para guardar aqui." ActionHref="/explorar" ActionText="Explorar receitas" />
+    }
+    else if (_favorites is not null)
+    {
+        <div class="recipe-grid">
+            @foreach (var recipe in _favorites.Items)
+            {
+                <RecipeCard Recipe="recipe" ShowFavoriteButton="true" OnFavoriteChanged="RemoveFavoriteAsync" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private PagedResult<RecipeCardResponse>? _favorites;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _favorites = await Api.GetFavoritesAsync();
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RemoveFavoriteAsync(RecipeCardResponse recipe)
+    {
+        await Api.SetFavoriteAsync(recipe.Id, false);
+        _favorites = _favorites! with
+        {
+            Items = _favorites.Items.Where(item => item.Id != recipe.Id).ToList(),
+            TotalCount = _favorites.TotalCount - 1
+        };
+    }
+}

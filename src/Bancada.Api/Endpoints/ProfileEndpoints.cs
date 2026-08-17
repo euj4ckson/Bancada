@@ -34,7 +34,8 @@ public static class ProfileEndpoints
             .Select(recipe => new RecipeCardResponse(recipe.Id, recipe.Title, recipe.Description,
                 recipe.PreparationTimeMinutes, recipe.Difficulty, recipe.CoverImageUrl, recipe.CreatedAt,
                 user.Id, user.DisplayName,
-                currentUserId.HasValue && recipe.Favorites.Any(favorite => favorite.UserId == currentUserId)))
+                currentUserId.HasValue && recipe.Favorites.Any(favorite => favorite.UserId == currentUserId),
+                recipe.IsPublished))
             .ToListAsync(cancellationToken);
 
         var submissions = await (from submission in dbContext.ChallengeSubmissions.AsNoTracking()

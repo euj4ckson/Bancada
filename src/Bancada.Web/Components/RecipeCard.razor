@@ -1,0 +1,49 @@
+<article class="recipe-card">
+    <a class="recipe-card-image" href="@($"/receitas/{Recipe.Id}")" aria-label="Ver @Recipe.Title">
+        @if (!string.IsNullOrWhiteSpace(Recipe.CoverImageUrl))
+        {
+            <img src="@Recipe.CoverImageUrl" alt="@Recipe.Title" loading="lazy" />
+        }
+        else
+        {
+            <span class="image-placeholder" aria-hidden="true">B</span>
+        }
+    </a>
+    <div class="recipe-card-body">
+        <div class="recipe-card-meta">
+            @if (!Recipe.IsPublished) { <span class="draft-label">RASCUNHO</span> }
+            <span>@Recipe.PreparationTimeMinutes min</span>
+            <span aria-hidden="true">·</span>
+            <span>@DifficultyLabel(Recipe.Difficulty)</span>
+        </div>
+        <h3><a href="@($"/receitas/{Recipe.Id}")">@Recipe.Title</a></h3>
+        <p class="recipe-byline">por <a href="@($"/perfil/{Recipe.AuthorId}")">@Recipe.AuthorDisplayName</a></p>
+        <p class="recipe-description">@Recipe.Description</p>
+        <div class="recipe-card-actions">
+            <a class="text-link" href="@($"/receitas/{Recipe.Id}")">Ver receita <span aria-hidden="true">→</span></a>
+            @if (ShowFavoriteButton)
+            {
+                <button class="icon-button" type="button" aria-label="@(Recipe.IsFavorite ? "Remover dos favoritos" : "Salvar receita")"
+                        title="@(Recipe.IsFavorite ? "Remover dos favoritos" : "Salvar receita")" @onclick="ToggleFavorite">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h12a.75.75 0 0 1 .75.75v16l-6.75-4-6.75 4v-16A.75.75 0 0 1 6 3.75Z" class="@(Recipe.IsFavorite ? "filled" : null)" /></svg>
+                </button>
+            }
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public RecipeCardResponse Recipe { get; set; } = null!;
+    [Parameter] public bool ShowFavoriteButton { get; set; }
+    [Parameter] public EventCallback<RecipeCardResponse> OnFavoriteChanged { get; set; }
+
+    private Task ToggleFavorite() => OnFavoriteChanged.InvokeAsync(Recipe);
+
+    public static string DifficultyLabel(RecipeDifficulty difficulty) => difficulty switch
+    {
+        RecipeDifficulty.Easy => "fácil",
+        RecipeDifficulty.Medium => "intermediário",
+        RecipeDifficulty.Hard => "avançado",
+        _ => string.Empty
+    };
+}

@@ -25,7 +25,7 @@ public sealed record RecipeIngredientInput(
     [property: Required, MaxLength(40)] string Quantity,
     [property: MaxLength(30)] string? Unit,
     [property: MaxLength(120)] string? Notes,
-    int SortOrder);
+    [property: Range(0, 49)] int SortOrder);
 
 public sealed record SaveRecipeRequest(
     [property: Required, MinLength(3), MaxLength(140)] string Title,
@@ -35,7 +35,7 @@ public sealed record SaveRecipeRequest(
     RecipeDifficulty Difficulty,
     [property: Range(1, 100)] int Servings,
     bool IsPublished,
-    [property: MinLength(1), MaxLength(50)] IReadOnlyList<RecipeIngredientInput> Ingredients);
+    [property: Required, MinLength(1), MaxLength(50)] IReadOnlyList<RecipeIngredientInput> Ingredients);
 
 public sealed record RecipeIngredientResponse(Guid Id, string Name, string Quantity, string? Unit, string? Notes, int SortOrder);
 
@@ -49,7 +49,8 @@ public sealed record RecipeCardResponse(
     DateTimeOffset CreatedAt,
     Guid AuthorId,
     string AuthorDisplayName,
-    bool IsFavorite = false);
+    bool IsFavorite = false,
+    bool IsPublished = true);
 
 public sealed record RecipeDetailResponse(
     Guid Id,

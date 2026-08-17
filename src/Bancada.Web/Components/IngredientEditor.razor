@@ -1,0 +1,49 @@
+@using Bancada.Web.Models
+
+<fieldset class="ingredient-editor">
+    <legend>Ingredientes</legend>
+    <p class="field-help">Coloque na mesma ordem em que serão usados.</p>
+    @for (var index = 0; index < Ingredients.Count; index++)
+    {
+        var currentIndex = index;
+        var ingredient = Ingredients[index];
+        <div class="ingredient-row" @key="ingredient">
+            <div class="field ingredient-name">
+                <label for="@($"ingredient-{index}")">Ingrediente @(index + 1)</label>
+                <input id="@($"ingredient-{index}")" @bind="ingredient.Name" placeholder="Ex.: farinha de trigo" />
+            </div>
+            <div class="field ingredient-quantity">
+                <label for="@($"quantity-{index}")">Quantidade</label>
+                <input id="@($"quantity-{index}")" @bind="ingredient.Quantity" placeholder="2" />
+            </div>
+            <div class="field ingredient-unit">
+                <label for="@($"unit-{index}")">Unidade</label>
+                <input id="@($"unit-{index}")" @bind="ingredient.Unit" placeholder="xícaras" />
+            </div>
+            <div class="field ingredient-notes">
+                <label for="@($"notes-{index}")">Observação</label>
+                <input id="@($"notes-{index}")" @bind="ingredient.Notes" placeholder="opcional" />
+            </div>
+            <div class="ingredient-controls" aria-label="Organizar ingrediente @(index + 1)">
+                <button type="button" class="icon-button" disabled="@(index == 0)" title="Mover para cima" aria-label="Mover ingrediente para cima" @onclick="() => Move(currentIndex, -1)">↑</button>
+                <button type="button" class="icon-button" disabled="@(index == Ingredients.Count - 1)" title="Mover para baixo" aria-label="Mover ingrediente para baixo" @onclick="() => Move(currentIndex, 1)">↓</button>
+                <button type="button" class="icon-button danger" disabled="@(Ingredients.Count == 1)" title="Remover" aria-label="Remover ingrediente" @onclick="() => Remove(currentIndex)">×</button>
+            </div>
+        </div>
+    }
+    <button type="button" class="text-button add-ingredient" @onclick="Add">+ Adicionar ingrediente</button>
+</fieldset>
+
+@code {
+    [Parameter, EditorRequired] public List<IngredientEditModel> Ingredients { get; set; } = null!;
+
+    private void Add() => Ingredients.Add(new IngredientEditModel());
+
+    private void Remove(int index) => Ingredients.RemoveAt(index);
+
+    private void Move(int index, int offset)
+    {
+        var target = index + offset;
+        (Ingredients[target], Ingredients[index]) = (Ingredients[index], Ingredients[target]);
+    }
+}

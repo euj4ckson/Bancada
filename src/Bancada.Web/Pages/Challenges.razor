@@ -1,0 +1,64 @@
+@page "/desafios"
+@inject ApiClient Api
+
+<PageTitle>Desafios — Bancada</PageTitle>
+
+<section class="page-shell page-heading split-heading">
+    <div>
+        <p class="eyebrow">UM TEMA, MUITOS PRATOS</p>
+        <h1>Desafios</h1>
+        <p>Uma proposta para cozinhar com limites, aproveitar melhor os ingredientes e ver soluções bem diferentes.</p>
+    </div>
+    <a class="mystery-mini" href="/caixa-misteriosa"><span>Quer algo rápido?</span><strong>Sortear uma Caixa Misteriosa →</strong></a>
+</section>
+
+<section class="page-shell section-block topless">
+    @if (_loading)
+    {
+        <LoadingBlock />
+    }
+    else if (_error is not null)
+    {
+        <EmptyState Title="Os desafios não carregaram." Description="Tente novamente daqui a pouco." />
+    }
+    else
+    {
+        @if (_active.Count > 0)
+        {
+            <div class="challenge-list">
+                @foreach (var challenge in _active) { <ChallengeCard Challenge="challenge" /> }
+            </div>
+        }
+        else
+        {
+            <EmptyState Title="Nenhum desafio aberto agora." Description="Os desafios encerrados continuam logo abaixo para consulta." />
+        }
+
+        @if (_closed.Count > 0)
+        {
+            <header class="section-heading past-heading"><h2>Desafios encerrados</h2></header>
+            <div class="challenge-list subdued">
+                @foreach (var challenge in _closed) { <ChallengeCard Challenge="challenge" /> }
+            </div>
+        }
+    }
+</section>
+
+@code {
+    private IReadOnlyList<ChallengeCardResponse> _active = [];
+    private IReadOnlyList<ChallengeCardResponse> _closed = [];
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var challenges = await Api.GetChallengesAsync();
+            _active = challenges.Where(item => item.Status == ChallengeStatus.Active).ToList();
+            _closed = challenges.Where(item => item.Status == ChallengeStatus.Closed).ToList();
+        }
+        catch (ApiException exception) { _error = exception.Message; }
+        finally { _loading = false; }
+    }
+}

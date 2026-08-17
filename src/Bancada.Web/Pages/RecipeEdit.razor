@@ -1,0 +1,210 @@
+@page "/publicar"
+@page "/receitas/{Id:guid}/editar"
+@attribute [Authorize]
+@using Bancada.Web.Models
+@inject ApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>@(Id.HasValue ? "Editar receita" : "Publicar receita") — Bancada</PageTitle>
+
+<section class="page-shell editor-heading">
+    <p class="eyebrow">@(Id.HasValue ? "DE VOLTA À RECEITA" : "DO SEU CADERNO")</p>
+    <h1>@(Id.HasValue ? "Editar receita" : "Publicar uma receita")</h1>
+    <p>Escreva como você explicaria para alguém cozinhando ao seu lado.</p>
+</section>
+
+<section class="page-shell editor-shell">
+    @if (_loading)
+    {
+        <LoadingBlock />
+    }
+    else
+    {
+        <EditForm Model="_model" OnValidSubmit="SaveAsync" class="recipe-form">
+            <DataAnnotationsValidator />
+            <div class="form-section">
+                <h2>O prato</h2>
+                <div class="field">
+                    <label for="title">Nome da receita</label>
+                    <InputText id="title" @bind-Value="_model.Title" placeholder="Ex.: Nhoque de mandioquinha" />
+                    <ValidationMessage For="() => _model.Title" />
+                </div>
+                <div class="field">
+                    <label for="description">Descrição curta</label>
+                    <InputTextArea id="description" @bind-Value="_model.Description" rows="3" placeholder="Conte o que torna esse prato especial, sem escrever um anúncio." />
+                    <ValidationMessage For="() => _model.Description" />
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_coverImageUrl))
+                {
+                    <img class="current-cover" src="@_coverImageUrl" alt="Foto atual da receita" />
+                }
+                <ImageUploader OnSelected="file => _image = file" OnError="message => _error = message" />
+            </div>
+
+            <div class="form-section form-grid">
+                <h2>Tempo e rendimento</h2>
+                <div class="field">
+                    <label for="time">Tempo total em minutos</label>
+                    <InputNumber id="time" @bind-Value="_model.PreparationTimeMinutes" />
+                    <ValidationMessage For="() => _model.PreparationTimeMinutes" />
+                </div>
+                <div class="field">
+                    <label for="servings">Rendimento</label>
+                    <InputNumber id="servings" @bind-Value="_model.Servings" />
+                    <ValidationMessage For="() => _model.Servings" />
+                </div>
+                <div class="field">
+                    <label for="difficulty">Dificuldade</label>
+                    <InputSelect id="difficulty" @bind-Value="_model.Difficulty">
+                        <option value="@RecipeDifficulty.Easy">Fácil</option>
+                        <option value="@RecipeDifficulty.Medium">Intermediário</option>
+                        <option value="@RecipeDifficulty.Hard">Avançado</option>
+                    </InputSelect>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <IngredientEditor Ingredients="_model.Ingredients" />
+            </div>
+
+            <div class="form-section">
+                <h2>Modo de preparo</h2>
+                <div class="field">
+                    <label for="instructions">Passo a passo</label>
+                    <InputTextArea id="instructions" @bind-Value="_model.Instructions" rows="10" placeholder="Separe em parágrafos curtos e diga os sinais que ajudam a acertar o ponto." />
+                    <ValidationMessage For="() => _model.Instructions" />
+                </div>
+            </div>
+
+            <div class="publish-panel">
+                <label class="check-field"><InputCheckbox @bind-Value="_model.IsPublished" /> Deixar a receita visível para a comunidade</label>
+                <p>Desmarcada, ela fica como rascunho no seu perfil.</p>
+            </div>
+
+            @if (_error is not null)
+            {
+                <p class="form-error" role="alert">@_error</p>
+            }
+
+            <div class="form-actions">
+                <button class="button primary" type="submit" disabled="@_saving">@(_saving ? "Salvando…" : "Salvar receita")</button>
+                <a class="button ghost" href="@(Id.HasValue ? $"/receitas/{Id}" : "/perfil")">Cancelar</a>
+                @if (Id.HasValue)
+                {
+                    @if (!_confirmDelete)
+                    {
+                        <button class="text-button danger-text push-right" type="button" @onclick="() => _confirmDelete = true">Excluir receita</button>
+                    }
+                    else
+                    {
+                        <span class="delete-confirm">Excluir mesmo? <button type="button" class="text-button danger-text" @onclick="DeleteAsync">Sim, excluir</button> <button type="button" class="text-button" @onclick="() => _confirmDelete = false">Cancelar</button></span>
+                    }
+                }
+            </div>
+        </EditForm>
+    }
+</section>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    private RecipeEditModel _model = new();
+    private IBrowserFile? _image;
+    private string? _coverImageUrl;
+    private string? _error;
+    private bool _loading;
+    private bool _saving;
+    private bool _confirmDelete;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Id.HasValue)
+        {
+            return;
+        }
+
+        _loading = true;
+        try
+        {
+            var recipe = await Api.GetRecipeAsync(Id.Value);
+            _model = new RecipeEditModel
+            {
+                Title = recipe.Title,
+                Description = recipe.Description,
+                Instructions = recipe.Instructions,
+                PreparationTimeMinutes = recipe.PreparationTimeMinutes,
+                Difficulty = recipe.Difficulty,
+                Servings = recipe.Servings,
+                IsPublished = recipe.IsPublished,
+                Ingredients = recipe.Ingredients.Select(item => new IngredientEditModel
+                {
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Unit = item.Unit,
+                    Notes = item.Notes
+                }).ToList()
+            };
+            _coverImageUrl = recipe.CoverImageUrl;
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_model.Ingredients.Any(item => string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.Quantity)))
+        {
+            _error = "Preencha o nome e a quantidade de todos os ingredientes.";
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            var request = new SaveRecipeRequest(_model.Title, _model.Description, _model.Instructions,
+                _model.PreparationTimeMinutes, _model.Difficulty, _model.Servings, _model.IsPublished,
+                _model.Ingredients.Select((item, index) => new RecipeIngredientInput(item.Name, item.Quantity,
+                    item.Unit, item.Notes, index)).ToList());
+            var recipeId = Id ?? await Api.CreateRecipeAsync(request);
+            if (Id.HasValue)
+            {
+                await Api.UpdateRecipeAsync(recipeId, request);
+            }
+
+            if (_image is not null)
+            {
+                await Api.UploadRecipeImageAsync(recipeId, _image);
+            }
+
+            Navigation.NavigateTo($"/receitas/{recipeId}");
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        try
+        {
+            await Api.DeleteRecipeAsync(Id!.Value);
+            Navigation.NavigateTo("/perfil");
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+            _confirmDelete = false;
+        }
+    }
+}

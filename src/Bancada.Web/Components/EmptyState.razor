@@ -1,0 +1,20 @@
+<div class="empty-state">
+    <p class="eyebrow">@Eyebrow</p>
+    <h2>@Title</h2>
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p>@Description</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(ActionHref) && !string.IsNullOrWhiteSpace(ActionText))
+    {
+        <a class="button primary" href="@ActionHref">@ActionText</a>
+    }
+</div>
+
+@code {
+    [Parameter] public string Eyebrow { get; set; } = "POR ENQUANTO";
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string? ActionHref { get; set; }
+    [Parameter] public string? ActionText { get; set; }
+}

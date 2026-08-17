@@ -1,7 +1,120 @@
-﻿@page "/"
+@page "/"
+@inject ApiClient Api
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Bancada — receitas feitas em casa</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="home-intro page-shell">
+    <div>
+        <p class="eyebrow">COZINHA DE VERDADE</p>
+        <h1>Receitas que passam de uma bancada para outra.</h1>
+        <p class="intro-copy">Um lugar para publicar o que deu certo, encontrar o próximo almoço e cozinhar junto — cada um na sua casa.</p>
+        <AuthorizeView>
+            <Authorized>
+                <a class="button primary" href="/publicar">Publicar uma receita</a>
+            </Authorized>
+            <NotAuthorized>
+                <a class="button primary" href="/criar-conta">Abrir minha bancada</a>
+                <a class="text-link intro-link" href="/explorar">Só quero explorar</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+    <aside class="editorial-note">
+        <span class="note-number">01</span>
+        <p>Receita boa também guarda contexto: quem fez, quanto demorou e o que mudaria na próxima vez.</p>
+    </aside>
+</section>
 
-Welcome to your new app.
+@if (_loading)
+{
+    <section class="page-shell"><LoadingBlock /></section>
+}
+else if (_error is not null)
+{
+    <section class="page-shell"><EmptyState Eyebrow="FORNO APAGADO" Title="Não conseguimos carregar a bancada." Description="Tente novamente em alguns instantes." /></section>
+}
+else
+{
+    @if (_activeChallenge is not null)
+    {
+        <section class="challenge-feature">
+            <div class="page-shell challenge-feature-inner">
+                <div>
+                    <p class="eyebrow light">DESAFIO DA SEMANA</p>
+                    <h2>@_activeChallenge.Title</h2>
+                    <p>@_activeChallenge.Description</p>
+                    @if (_activeChallenge.RequiredIngredients.Count > 0)
+                    {
+                        <p class="challenge-ingredients">Ingrediente obrigatório: @string.Join(", ", _activeChallenge.RequiredIngredients)</p>
+                    }
+                    <a class="button light" href="@($"/desafios/{_activeChallenge.Id}")">Ver desafio</a>
+                </div>
+                <div class="challenge-date">
+                    <span>até</span>
+                    <strong>@_activeChallenge.EndsAt.ToString("dd")</strong>
+                    <span>@_activeChallenge.EndsAt.ToString("MMM").TrimEnd('.')</span>
+                </div>
+            </div>
+        </section>
+    }
+
+    <section class="page-shell section-block">
+        <header class="section-heading">
+            <div>
+                <p class="eyebrow">NA BANCADA</p>
+                <h2>Receitas novas</h2>
+            </div>
+            <a class="text-link" href="/explorar">Ver todas <span aria-hidden="true">→</span></a>
+        </header>
+
+        @if (_recipes.Count == 0)
+        {
+            <EmptyState Title="A bancada ainda está vazia." Description="As primeiras receitas publicadas vão aparecer aqui." />
+        }
+        else
+        {
+            <div class="recipe-grid">
+                @foreach (var recipe in _recipes)
+                {
+                    <RecipeCard Recipe="recipe" ShowFavoriteButton="_authenticated" OnFavoriteChanged="ToggleFavoriteAsync" />
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+    private IReadOnlyList<RecipeCardResponse> _recipes = [];
+    private ChallengeCardResponse? _activeChallenge;
+    private bool _authenticated;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var auth = await AuthenticationStateTask;
+            _authenticated = auth.User.Identity?.IsAuthenticated == true;
+            var recipesTask = Api.GetRecipesAsync(pageSize: 6);
+            var challengesTask = Api.GetChallengesAsync();
+            await Task.WhenAll(recipesTask, challengesTask);
+            _recipes = recipesTask.Result.Items;
+            _activeChallenge = challengesTask.Result.FirstOrDefault(item => item.Status == ChallengeStatus.Active);
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleFavoriteAsync(RecipeCardResponse recipe)
+    {
+        await Api.SetFavoriteAsync(recipe.Id, !recipe.IsFavorite);
+        _recipes = _recipes.Select(item => item.Id == recipe.Id ? item with { IsFavorite = !item.IsFavorite } : item).ToList();
+    }
+}

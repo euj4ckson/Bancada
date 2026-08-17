@@ -1,0 +1,139 @@
+@inject ApiClient Api
+
+@if (_loading)
+{
+    <section class="page-shell"><LoadingBlock /></section>
+}
+else if (_error is not null || _profile is null)
+{
+    <section class="page-shell"><EmptyState Eyebrow="SEM PERFIL" Title="Não encontramos esta bancada." Description="O perfil pode não estar mais disponível." ActionHref="/explorar" ActionText="Explorar receitas" /></section>
+}
+else
+{
+    <header class="profile-header">
+        <div class="page-shell profile-header-inner">
+            <div class="profile-avatar" aria-hidden="true">
+                @if (!string.IsNullOrWhiteSpace(_profile.AvatarUrl)) { <img src="@_profile.AvatarUrl" alt="" /> }
+                else { <span>@_profile.DisplayName[0]</span> }
+            </div>
+            <div class="profile-copy">
+                <p class="eyebrow">NA BANCADA DESDE @_profile.CreatedAt.ToString("MMMM 'DE' yyyy").ToUpperInvariant()</p>
+                <h1>@_profile.DisplayName</h1>
+                <p>@(_profile.Bio ?? "Ainda não escreveu uma apresentação.")</p>
+                @if (_profile.IsOwner)
+                {
+                    <button class="text-button" type="button" @onclick="() => _editing = !_editing">@(_editing ? "Fechar edição" : "Editar perfil")</button>
+                }
+            </div>
+        </div>
+    </header>
+
+    @if (_editing)
+    {
+        <section class="page-shell narrow profile-edit">
+            <EditForm Model="_editModel" OnValidSubmit="SaveProfileAsync">
+                <DataAnnotationsValidator />
+                <div class="field">
+                    <label for="profile-name">Nome de exibição</label>
+                    <InputText id="profile-name" @bind-Value="_editModel.DisplayName" />
+                    <ValidationMessage For="() => _editModel.DisplayName" />
+                </div>
+                <div class="field">
+                    <label for="profile-bio">Sobre você</label>
+                    <InputTextArea id="profile-bio" @bind-Value="_editModel.Bio" rows="4" />
+                    <ValidationMessage For="() => _editModel.Bio" />
+                </div>
+                @if (_editError is not null) { <p class="form-error" role="alert">@_editError</p> }
+                <button class="button primary" type="submit" disabled="@_saving">Salvar perfil</button>
+            </EditForm>
+        </section>
+    }
+
+    <section class="page-shell section-block profile-recipes">
+        <header class="section-heading">
+            <div><p class="eyebrow">RECEITAS</p><h2>@(_profile.IsOwner ? "Minha bancada" : $"Receitas de {_profile.DisplayName.Split(' ')[0]}")</h2></div>
+            @if (_profile.IsOwner) { <a class="button compact primary" href="/publicar">Nova receita</a> }
+        </header>
+        @if (_profile.Recipes.Count == 0)
+        {
+            <EmptyState Title="@(_profile.IsOwner ? "Você ainda não publicou nenhuma receita." : "Nenhuma receita publicada por aqui.")"
+                        Description="@(_profile.IsOwner ? "Quando salvar a primeira, ela aparece nesta página." : null)"
+                        ActionHref="@(_profile.IsOwner ? "/publicar" : null)" ActionText="@(_profile.IsOwner ? "Escrever uma receita" : null)" />
+        }
+        else
+        {
+            <div class="recipe-grid">
+                @foreach (var recipe in _profile.Recipes)
+                {
+                    <RecipeCard Recipe="recipe" />
+                }
+            </div>
+        }
+    </section>
+
+    @if (_profile.ChallengeSubmissions.Count > 0)
+    {
+        <section class="profile-submissions">
+            <div class="page-shell section-block">
+                <header class="section-heading"><div><p class="eyebrow">DESAFIOS</p><h2>Participações</h2></div></header>
+                <div class="submission-strip">
+                    @foreach (var submission in _profile.ChallengeSubmissions)
+                    {
+                        <a href="@($"/receitas/{submission.RecipeId}")">
+                            @if (!string.IsNullOrWhiteSpace(submission.RecipeImageUrl)) { <img src="@submission.RecipeImageUrl" alt="@submission.RecipeTitle" loading="lazy" /> }
+                            <strong>@submission.RecipeTitle</strong>
+                            <span>@submission.SubmittedAt.ToString("dd/MM/yyyy")</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+}
+
+@code {
+    [Parameter] public Guid? UserId { get; set; }
+    [Parameter] public bool Current { get; set; }
+    private ProfileResponse? _profile;
+    private ProfileEditModel _editModel = new();
+    private bool _loading = true;
+    private bool _editing;
+    private bool _saving;
+    private string? _error;
+    private string? _editError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        try
+        {
+            _profile = Current ? await Api.GetCurrentProfileAsync() : await Api.GetProfileAsync(UserId!.Value);
+            _editModel = new ProfileEditModel { DisplayName = _profile.DisplayName, Bio = _profile.Bio };
+        }
+        catch (ApiException exception) { _error = exception.Message; }
+        finally { _loading = false; }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        _saving = true;
+        _editError = null;
+        try
+        {
+            await Api.UpdateProfileAsync(new UpdateProfileRequest(_editModel.DisplayName, _editModel.Bio));
+            _profile = _profile! with { DisplayName = _editModel.DisplayName, Bio = _editModel.Bio };
+            _editing = false;
+        }
+        catch (ApiException exception) { _editError = exception.Message; }
+        finally { _saving = false; }
+    }
+
+    private sealed class ProfileEditModel
+    {
+        [Required(ErrorMessage = "Informe seu nome."), MinLength(2), MaxLength(80)]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [MaxLength(500, ErrorMessage = "Use no máximo 500 caracteres.")]
+        public string? Bio { get; set; }
+    }
+}

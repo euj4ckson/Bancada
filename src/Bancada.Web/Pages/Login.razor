@@ -1,0 +1,73 @@
+@page "/entrar"
+@inject BancadaAuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Entrar — Bancada</PageTitle>
+
+<section class="auth-page page-shell">
+    <div class="auth-copy">
+        <p class="eyebrow">DE VOLTA À COZINHA</p>
+        <h1>Entre na sua bancada.</h1>
+        <p>Continue aquela receita, veja o que você guardou e participe do desafio da semana.</p>
+    </div>
+    <div class="auth-form-panel">
+        <EditForm Model="_model" OnValidSubmit="SubmitAsync">
+            <DataAnnotationsValidator />
+            <div class="field">
+                <label for="email">E-mail</label>
+                <InputText id="email" @bind-Value="_model.Email" autocomplete="email" />
+                <ValidationMessage For="() => _model.Email" />
+            </div>
+            <div class="field">
+                <label for="password">Senha</label>
+                <InputText id="password" type="password" @bind-Value="_model.Password" autocomplete="current-password" />
+                <ValidationMessage For="() => _model.Password" />
+            </div>
+            <label class="check-field"><InputCheckbox @bind-Value="_model.RememberMe" /> Manter minha conta conectada</label>
+            @if (_error is not null)
+            {
+                <p class="form-error" role="alert">@_error</p>
+            }
+            <button class="button primary full" type="submit" disabled="@_submitting">@(_submitting ? "Entrando…" : "Entrar")</button>
+        </EditForm>
+        <p class="auth-alternate">Ainda não tem conta? <a href="/criar-conta">Crie sua bancada</a>.</p>
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+    private readonly LoginForm _model = new();
+    private bool _submitting;
+    private string? _error;
+
+    private async Task SubmitAsync()
+    {
+        _submitting = true;
+        _error = null;
+        try
+        {
+            await AuthState.LoginAsync(new LoginRequest(_model.Email, _model.Password, _model.RememberMe));
+            var target = ReturnUrl is not null && ReturnUrl.StartsWith('/') && !ReturnUrl.StartsWith("//") ? ReturnUrl : "/";
+            Navigation.NavigateTo(target);
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private sealed class LoginForm
+    {
+        [Required(ErrorMessage = "Informe seu e-mail."), EmailAddress(ErrorMessage = "Digite um e-mail válido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe sua senha.")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}

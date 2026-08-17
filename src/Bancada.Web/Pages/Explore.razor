@@ -1,0 +1,148 @@
+@page "/explorar"
+@inject ApiClient Api
+
+<PageTitle>Explorar receitas — Bancada</PageTitle>
+
+<section class="page-shell page-heading">
+    <p class="eyebrow">CADERNO ABERTO</p>
+    <h1>Explorar receitas</h1>
+    <p>Busque pelo prato, pelo ingrediente que já está na geladeira ou pelo tempo que você tem hoje.</p>
+</section>
+
+<section class="page-shell explore-layout">
+    <form class="filter-panel" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+        <div class="field">
+            <label for="search">O que você procura?</label>
+            <input id="search" @bind="_search" placeholder="Ex.: risoto, bolo de fubá" />
+        </div>
+        <div class="filter-row">
+            <div class="field">
+                <label for="ingredient">Ingrediente</label>
+                <input id="ingredient" @bind="_ingredient" placeholder="Ex.: abóbora" />
+            </div>
+            <div class="field">
+                <label for="difficulty">Dificuldade</label>
+                <select id="difficulty" @bind="_difficulty">
+                    <option value="">Todas</option>
+                    <option value="@RecipeDifficulty.Easy">Fácil</option>
+                    <option value="@RecipeDifficulty.Medium">Intermediário</option>
+                    <option value="@RecipeDifficulty.Hard">Avançado</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="time">Tempo máximo</label>
+                <select id="time" @bind="_maxTime">
+                    <option value="">Qualquer tempo</option>
+                    <option value="30">Até 30 min</option>
+                    <option value="60">Até 1 hora</option>
+                    <option value="120">Até 2 horas</option>
+                </select>
+            </div>
+        </div>
+        <button class="button primary" type="submit" disabled="@_loading">Buscar receitas</button>
+    </form>
+
+    <a class="mystery-callout" href="/caixa-misteriosa">
+        <span class="eyebrow">SEM IDEIA?</span>
+        <strong>Abra a Caixa Misteriosa</strong>
+        <span>Quatro ingredientes para tirar o jantar do automático.</span>
+    </a>
+</section>
+
+<section class="page-shell section-block">
+    <header class="section-heading compact-heading">
+        <h2>@ResultTitle</h2>
+        @if (_result is not null)
+        {
+            <span>@_result.TotalCount receita@(_result.TotalCount == 1 ? null : "s")</span>
+        }
+    </header>
+    @if (_loading)
+    {
+        <LoadingBlock />
+    }
+    else if (_error is not null)
+    {
+        <EmptyState Title="A busca não respondeu." Description="Revise os filtros ou tente de novo." />
+    }
+    else if (_result?.Items.Count == 0)
+    {
+        <EmptyState Title="Nenhuma receita por aqui." Description="Tente retirar um filtro ou buscar outro ingrediente." />
+    }
+    else if (_result is not null)
+    {
+        <div class="recipe-grid">
+            @foreach (var recipe in _result.Items)
+            {
+                <RecipeCard Recipe="recipe" ShowFavoriteButton="_authenticated" OnFavoriteChanged="ToggleFavoriteAsync" />
+            }
+        </div>
+        @if (_result.TotalPages > 1)
+        {
+            <nav class="pagination" aria-label="Páginas de receitas">
+                <button type="button" disabled="@(_page == 1)" @onclick="() => ChangePageAsync(_page - 1)">Anterior</button>
+                <span>Página @_page de @_result.TotalPages</span>
+                <button type="button" disabled="@(_page == _result.TotalPages)" @onclick="() => ChangePageAsync(_page + 1)">Próxima</button>
+            </nav>
+        }
+    }
+</section>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+    private PagedResult<RecipeCardResponse>? _result;
+    private string? _search;
+    private string? _ingredient;
+    private RecipeDifficulty? _difficulty;
+    private int? _maxTime;
+    private int _page = 1;
+    private bool _loading = true;
+    private bool _authenticated;
+    private string? _error;
+    private string ResultTitle => string.IsNullOrWhiteSpace(_search) ? "Receitas recentes" : $"Resultados para “{_search}”";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _authenticated = (await AuthenticationStateTask).User.Identity?.IsAuthenticated == true;
+        await LoadAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private async Task ChangePageAsync(int page)
+    {
+        _page = page;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _result = await Api.GetRecipesAsync(_page, 12, _search, _difficulty, _maxTime, _ingredient);
+        }
+        catch (ApiException exception)
+        {
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleFavoriteAsync(RecipeCardResponse recipe)
+    {
+        await Api.SetFavoriteAsync(recipe.Id, !recipe.IsFavorite);
+        _result = _result! with
+        {
+            Items = _result.Items.Select(item => item.Id == recipe.Id ? item with { IsFavorite = !item.IsFavorite } : item).ToList()
+        };
+    }
+}
