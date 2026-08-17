@@ -31,22 +31,29 @@ O cliente conversa com a API por REST. O banco de produção pode ser um Postgre
 - PostgreSQL acessível localmente ou uma conexão de desenvolvimento no Neon;
 - HTTPS development certificate confiável: `dotnet dev-certs https --trust`.
 
-Não há credenciais no repositório. Configure a conexão local com user secrets:
+Não há credenciais no repositório. O projeto da API já está registrado no Secret Manager. Configure a conexão local com user secrets:
 
 ```powershell
-dotnet user-secrets init --project src/Bancada.Api
 dotnet user-secrets set "ConnectionStrings:Bancada" "Host=localhost;Port=5432;Database=bancada;Username=postgres;Password=SUA_SENHA" --project src/Bancada.Api
 ```
 
 Em ambientes hospedados, use `ConnectionStrings__Bancada`. O arquivo `.env.example` relaciona todas as variáveis aceitas, mas não é carregado automaticamente pela aplicação.
 
+Para usar Neon, forneça a conexão no formato de palavras-chave do Npgsql. Use a conexão direta, sem `-pooler` no host, ao aplicar migrations; reserve a conexão com pool para a aplicação hospedada:
+
+```text
+Host=HOST-DIRETO;Port=5432;Database=neondb;Username=USUARIO;Password=SENHA;SSL Mode=Require;Channel Binding=Require
+```
+
 ## Banco e execução
 
-Restaure as ferramentas e aplique a migration inicial:
+Restaure as ferramentas. Para as operações do EF Core, informe explicitamente a conexão direta em `ConnectionStrings__Bancada`; isso impede que uma migration seja aplicada por engano em outro banco:
 
 ```powershell
 dotnet tool restore
+$env:ConnectionStrings__Bancada = "Host=HOST-DIRETO;Port=5432;Database=neondb;Username=USUARIO;Password=SENHA;SSL Mode=Require;Channel Binding=Require"
 dotnet ef database update --project src/Bancada.Infrastructure --startup-project src/Bancada.Api
+Remove-Item Env:ConnectionStrings__Bancada
 ```
 
 Inicie a API e o cliente em terminais separados:
@@ -88,11 +95,29 @@ Os testes de domínio cobrem regras importantes. Os testes de API usam SQLite re
 
 ## Deploy
 
-Publique `Bancada.Web` e envie o conteúdo de `artifacts/web/wwwroot` para uma hospedagem estática:
+### Frontend no Cloudflare Pages
+
+O script `build.sh` instala o SDK do .NET 10 no ambiente Linux do Cloudflare, publica somente o cliente Blazor WebAssembly e gera os arquivos estáticos em `output/wwwroot`.
+
+Ao importar este repositório no Cloudflare Pages, use:
+
+```text
+Production branch: main
+Framework preset: None
+Build command: bash build.sh
+Build output directory: output/wwwroot
+Root directory: (vazio)
+```
+
+Depois que a API possuir uma URL pública, crie a variável de ambiente `API_BASE_URL` no Pages com uma URL HTTPS absoluta, por exemplo `https://api.seu-dominio.com`. O build grava esse endereço no `appsettings.json` publicado sem alterar a configuração local. Se a variável ainda não existir, o site será publicado usando a URL local de desenvolvimento e as operações remotas não funcionarão.
+
+Para publicar o frontend manualmente sem o Cloudflare:
 
 ```powershell
 dotnet publish src/Bancada.Web --configuration Release --output artifacts/web
 ```
+
+### API
 
 A API possui um Dockerfile para build a partir da raiz do repositório:
 
