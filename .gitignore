@@ -6,6 +6,9 @@
 TestResults/
 artifacts/
 coverage/
+/output/
+/.dotnet/
+/dotnet-install.sh
 src/Bancada.Api/wwwroot/uploads/
 .env
 .env.*

@@ -95,11 +95,29 @@ Os testes de domínio cobrem regras importantes. Os testes de API usam SQLite re
 
 ## Deploy
 
-Publique `Bancada.Web` e envie o conteúdo de `artifacts/web/wwwroot` para uma hospedagem estática:
+### Frontend no Cloudflare Pages
+
+O script `build.sh` instala o SDK do .NET 10 no ambiente Linux do Cloudflare, publica somente o cliente Blazor WebAssembly e gera os arquivos estáticos em `output/wwwroot`.
+
+Ao importar este repositório no Cloudflare Pages, use:
+
+```text
+Production branch: main
+Framework preset: None
+Build command: bash build.sh
+Build output directory: output/wwwroot
+Root directory: (vazio)
+```
+
+Depois que a API possuir uma URL pública, crie a variável de ambiente `API_BASE_URL` no Pages com uma URL HTTPS absoluta, por exemplo `https://api.seu-dominio.com`. O build grava esse endereço no `appsettings.json` publicado sem alterar a configuração local. Se a variável ainda não existir, o site será publicado usando a URL local de desenvolvimento e as operações remotas não funcionarão.
+
+Para publicar o frontend manualmente sem o Cloudflare:
 
 ```powershell
 dotnet publish src/Bancada.Web --configuration Release --output artifacts/web
 ```
+
+### API
 
 A API possui um Dockerfile para build a partir da raiz do repositório:
 
