@@ -31,22 +31,29 @@ O cliente conversa com a API por REST. O banco de produção pode ser um Postgre
 - PostgreSQL acessível localmente ou uma conexão de desenvolvimento no Neon;
 - HTTPS development certificate confiável: `dotnet dev-certs https --trust`.
 
-Não há credenciais no repositório. Configure a conexão local com user secrets:
+Não há credenciais no repositório. O projeto da API já está registrado no Secret Manager. Configure a conexão local com user secrets:
 
 ```powershell
-dotnet user-secrets init --project src/Bancada.Api
 dotnet user-secrets set "ConnectionStrings:Bancada" "Host=localhost;Port=5432;Database=bancada;Username=postgres;Password=SUA_SENHA" --project src/Bancada.Api
 ```
 
 Em ambientes hospedados, use `ConnectionStrings__Bancada`. O arquivo `.env.example` relaciona todas as variáveis aceitas, mas não é carregado automaticamente pela aplicação.
 
+Para usar Neon, forneça a conexão no formato de palavras-chave do Npgsql. Use a conexão direta, sem `-pooler` no host, ao aplicar migrations; reserve a conexão com pool para a aplicação hospedada:
+
+```text
+Host=HOST-DIRETO;Port=5432;Database=neondb;Username=USUARIO;Password=SENHA;SSL Mode=Require;Channel Binding=Require
+```
+
 ## Banco e execução
 
-Restaure as ferramentas e aplique a migration inicial:
+Restaure as ferramentas. Para as operações do EF Core, informe explicitamente a conexão direta em `ConnectionStrings__Bancada`; isso impede que uma migration seja aplicada por engano em outro banco:
 
 ```powershell
 dotnet tool restore
+$env:ConnectionStrings__Bancada = "Host=HOST-DIRETO;Port=5432;Database=neondb;Username=USUARIO;Password=SENHA;SSL Mode=Require;Channel Binding=Require"
 dotnet ef database update --project src/Bancada.Infrastructure --startup-project src/Bancada.Api
+Remove-Item Env:ConnectionStrings__Bancada
 ```
 
 Inicie a API e o cliente em terminais separados:
