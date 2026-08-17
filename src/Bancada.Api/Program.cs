@@ -15,7 +15,8 @@ builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLi
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     var connectionString = builder.Configuration.GetConnectionString("Bancada")
-        ?? "Host=localhost;Port=5432;Database=bancada;Username=postgres;Password=configure-with-user-secrets";
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:Bancada must be configured with user secrets or an environment variable.");
     builder.Services.AddDbContext<BancadaDbContext>(options => options.UseNpgsql(connectionString));
 }
 

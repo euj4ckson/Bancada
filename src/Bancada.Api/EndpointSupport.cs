@@ -20,22 +20,48 @@ internal static class EndpointSupport
 
         if (request is SaveRecipeRequest recipe)
         {
-            foreach (var (ingredient, index) in recipe.Ingredients.Select((item, index) => (item, index)))
+            if (!Enum.IsDefined(recipe.Difficulty))
             {
-                var ingredientResults = new List<ValidationResult>();
-                Validator.TryValidateObject(ingredient, new ValidationContext(ingredient), ingredientResults, true);
-                results.AddRange(ingredientResults.Select(result => new ValidationResult(
-                    result.ErrorMessage,
-                    result.MemberNames.Select(member => $"Ingredients[{index}].{member}"))));
+                results.Add(new ValidationResult("Escolha uma dificuldade válida.", [nameof(recipe.Difficulty)]));
             }
 
-            var duplicates = recipe.Ingredients
-                .GroupBy(item => Bancada.Domain.Ingredient.Normalize(item.Name))
-                .Any(group => group.Count() > 1);
-            if (duplicates)
+            if (recipe.Ingredients is not null)
             {
-                results.Add(new ValidationResult("Não repita o mesmo ingrediente.", [nameof(recipe.Ingredients)]));
+                foreach (var (ingredient, index) in recipe.Ingredients.Select((item, index) => (item, index)))
+                {
+                    if (ingredient is null)
+                    {
+                        results.Add(new ValidationResult("Informe o ingrediente.", [$"Ingredients[{index}]"]));
+                        continue;
+                    }
+
+                    var ingredientResults = new List<ValidationResult>();
+                    Validator.TryValidateObject(ingredient, new ValidationContext(ingredient), ingredientResults, true);
+                    results.AddRange(ingredientResults.Select(result => new ValidationResult(
+                        result.ErrorMessage,
+                        result.MemberNames.Select(member => $"Ingredients[{index}].{member}"))));
+                }
+
+                var duplicateNames = recipe.Ingredients
+                    .Where(item => item is not null && !string.IsNullOrWhiteSpace(item.Name))
+                    .GroupBy(item => Bancada.Domain.Ingredient.Normalize(item.Name))
+                    .Any(group => group.Count() > 1);
+                if (duplicateNames)
+                {
+                    results.Add(new ValidationResult("Não repita o mesmo ingrediente.", [nameof(recipe.Ingredients)]));
+                }
+
+                var sortOrders = recipe.Ingredients.Where(item => item is not null).Select(item => item.SortOrder).ToList();
+                if (sortOrders.Distinct().Count() != sortOrders.Count)
+                {
+                    results.Add(new ValidationResult("A ordem dos ingredientes não pode se repetir.", [nameof(recipe.Ingredients)]));
+                }
             }
+        }
+
+        if (request is ChallengeSubmissionRequest { RecipeId: var recipeId } && recipeId == Guid.Empty)
+        {
+            results.Add(new ValidationResult("Escolha uma receita.", [nameof(ChallengeSubmissionRequest.RecipeId)]));
         }
 
         return results

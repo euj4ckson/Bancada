@@ -64,6 +64,28 @@ public sealed class RecipeWorkflowTests : IDisposable
     }
 
     [Fact]
+    public async Task Invalid_recipe_inputs_return_a_validation_problem()
+    {
+        await RegisterAsync(_client, "fabio");
+        var request = RecipeRequest("Cuscuz com legumes", "Cenoura") with
+        {
+            Difficulty = (RecipeDifficulty)99,
+            Ingredients =
+            [
+                new RecipeIngredientInput("Cenoura", "1", "unidade", null, 0),
+                new RecipeIngredientInput("cenoura", "2", "unidades", null, 0)
+            ]
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/recipes", request);
+        var problem = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Difficulty", problem);
+        Assert.Contains("Ingredients", problem);
+    }
+
+    [Fact]
     public async Task Active_challenge_accepts_one_eligible_recipe_per_user()
     {
         await RegisterAsync(_client, "elisa");

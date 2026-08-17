@@ -8,7 +8,7 @@ public sealed class BancadaDbContextFactory : IDesignTimeDbContextFactory<Bancad
     public BancadaDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Bancada")
-            ?? "Host=localhost;Port=5432;Database=bancada;Username=postgres;Password=postgres";
+            ?? "Host=localhost;Port=5432;Database=bancada;Username=postgres";
         var options = new DbContextOptionsBuilder<BancadaDbContext>()
             .UseNpgsql(connectionString)
             .Options;

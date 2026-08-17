@@ -34,7 +34,7 @@ public static class RecipeEndpoints
         int page = 1, int pageSize = 12, string? search = null, RecipeDifficulty? difficulty = null,
         int? maxTime = null, string? ingredient = null, CancellationToken cancellationToken = default)
     {
-        page = Math.Max(page, 1);
+        page = Math.Clamp(page, 1, 10_000);
         pageSize = Math.Clamp(pageSize, 1, 24);
         var userId = context.User.GetUserId();
 
@@ -300,7 +300,7 @@ public static class RecipeEndpoints
     private static async Task<IResult> ListFavoritesAsync(BancadaDbContext dbContext, HttpContext context,
         int page = 1, int pageSize = 12, CancellationToken cancellationToken = default)
     {
-        page = Math.Max(page, 1);
+        page = Math.Clamp(page, 1, 10_000);
         pageSize = Math.Clamp(pageSize, 1, 24);
         var userId = context.User.GetUserId()!.Value;
         var query = dbContext.Recipes.AsNoTracking()
