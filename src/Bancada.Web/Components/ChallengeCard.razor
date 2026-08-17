@@ -11,7 +11,7 @@
         {
             <p class="ingredient-line"><strong>Na bancada:</strong> @string.Join(", ", Challenge.RequiredIngredients)</p>
         }
-        <a class="text-link" href="@($"/desafios/{Challenge.Id}")">Ver desafio <span aria-hidden="true">→</span></a>
+        <a class="text-link" href="@($"/desafios/{Challenge.Id}")">Ver detalhes da prova <span aria-hidden="true">→</span></a>
     </div>
     @if (!string.IsNullOrWhiteSpace(Challenge.CoverImageUrl))
     {

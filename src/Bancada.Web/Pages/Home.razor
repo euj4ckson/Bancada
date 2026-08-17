@@ -3,25 +3,30 @@
 
 <PageTitle>Bancada — receitas feitas em casa</PageTitle>
 
-<section class="home-intro page-shell">
-    <div>
-        <p class="eyebrow">COZINHA DE VERDADE</p>
-        <h1>Receitas que passam de uma bancada para outra.</h1>
-        <p class="intro-copy">Um lugar para publicar o que deu certo, encontrar o próximo almoço e cozinhar junto — cada um na sua casa.</p>
-        <AuthorizeView>
-            <Authorized>
-                <a class="button primary" href="/publicar">Publicar uma receita</a>
-            </Authorized>
-            <NotAuthorized>
-                <a class="button primary" href="/criar-conta">Abrir minha bancada</a>
-                <a class="text-link intro-link" href="/explorar">Só quero explorar</a>
-            </NotAuthorized>
-        </AuthorizeView>
+<section class="home-stage">
+    <div class="home-intro page-shell">
+        <div>
+            <p class="eyebrow">TÉCNICA, REPERTÓRIO E CORAGEM PARA TESTAR</p>
+            <h1>Seu melhor prato começa na bancada.</h1>
+            <p class="intro-copy">Publique suas receitas, encare novas provas e descubra como outros cozinheiros resolveram o mesmo ingrediente.</p>
+            <div class="hero-actions">
+                <AuthorizeView>
+                    <Authorized>
+                        <a class="button primary" href="/publicar">Apresentar um prato</a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a class="button primary" href="/criar-conta">Montar minha bancada</a>
+                        <a class="text-link intro-link" href="/explorar">Explorar os pratos</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+        <aside class="editorial-note">
+            <span class="stage-kicker">EDIÇÃO ABERTA</span>
+            <span class="note-number" aria-hidden="true">01</span>
+            <p>Não existe um único prato certo. Existe técnica, escolha e a história que você coloca no prato.</p>
+        </aside>
     </div>
-    <aside class="editorial-note">
-        <span class="note-number">01</span>
-        <p>Receita boa também guarda contexto: quem fez, quanto demorou e o que mudaria na próxima vez.</p>
-    </aside>
 </section>
 
 @if (_loading)
@@ -39,14 +44,14 @@ else
         <section class="challenge-feature">
             <div class="page-shell challenge-feature-inner">
                 <div>
-                    <p class="eyebrow light">DESAFIO DA SEMANA</p>
+                    <p class="eyebrow light">PROVA EM DESTAQUE</p>
                     <h2>@_activeChallenge.Title</h2>
                     <p>@_activeChallenge.Description</p>
                     @if (_activeChallenge.RequiredIngredients.Count > 0)
                     {
                         <p class="challenge-ingredients">Ingrediente obrigatório: @string.Join(", ", _activeChallenge.RequiredIngredients)</p>
                     }
-                    <a class="button light" href="@($"/desafios/{_activeChallenge.Id}")">Ver desafio</a>
+                    <a class="button light" href="@($"/desafios/{_activeChallenge.Id}")">Ver regras e participar</a>
                 </div>
                 <div class="challenge-date">
                     <span>até</span>
@@ -60,8 +65,8 @@ else
     <section class="page-shell section-block">
         <header class="section-heading">
             <div>
-                <p class="eyebrow">NA BANCADA</p>
-                <h2>Receitas novas</h2>
+                <p class="eyebrow">SERVIDOS AGORA</p>
+                <h2>Novos pratos na bancada</h2>
             </div>
             <a class="text-link" href="/explorar">Ver todas <span aria-hidden="true">→</span></a>
         </header>

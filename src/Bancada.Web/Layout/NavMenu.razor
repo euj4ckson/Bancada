@@ -5,12 +5,15 @@
     <div class="page-shell header-inner">
         <a class="wordmark" href="/" aria-label="Bancada, página inicial">
             <span class="wordmark-mark" aria-hidden="true">B</span>
-            <span>Bancada</span>
+            <span class="wordmark-copy">
+                <strong>Bancada</strong>
+                <small>cozinha autoral</small>
+            </span>
         </a>
 
         <nav class="desktop-nav" aria-label="Navegação principal">
             <NavLink href="/explorar">Explorar</NavLink>
-            <NavLink href="/desafios">Desafios</NavLink>
+            <NavLink href="/desafios">Provas</NavLink>
             <NavLink href="/caixa-misteriosa">Caixa misteriosa</NavLink>
             <AuthorizeView>
                 <Authorized>
@@ -40,7 +43,7 @@
     <Authorized>
         <nav class="mobile-nav" aria-label="Navegação principal no celular">
             <NavLink href="/explorar"><NavIcon Path="M3 11.5a8.5 8.5 0 1 0 17 0 8.5 8.5 0 0 0-17 0Zm11.9-3.4-2 5-5 2 2-5 5-2Z" />Explorar</NavLink>
-            <NavLink href="/desafios"><NavIcon Path="M5 4.5h14v4a7 7 0 0 1-14 0v-4Zm3 13h8M12 15.5V20" />Desafios</NavLink>
+            <NavLink href="/desafios"><NavIcon Path="M5 4.5h14v4a7 7 0 0 1-14 0v-4Zm3 13h8M12 15.5V20" />Provas</NavLink>
             <NavLink class="publish-nav" href="/publicar"><NavIcon Path="M12 4v16M4 12h16" />Publicar</NavLink>
             <NavLink href="/favoritos"><NavIcon Path="M6 3.75h12a.75.75 0 0 1 .75.75v16l-6.75-4-6.75 4v-16A.75.75 0 0 1 6 3.75Z" />Favoritos</NavLink>
             <NavLink href="/perfil"><NavIcon Path="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />Perfil</NavLink>
