@@ -6,10 +6,13 @@ namespace Bancada.Infrastructure;
 
 public sealed class DevelopmentDataSeeder(BancadaDbContext dbContext, UserManager<ApplicationUser> userManager)
 {
+    private const string CheeseBreadCoverImageUrl = "/images/recipes/pao-de-queijo-tabuleiro.webp";
+
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         if (await dbContext.Recipes.AnyAsync(cancellationToken))
         {
+            await RepairSeededRecipeImagesAsync(cancellationToken);
             return;
         }
 
@@ -22,7 +25,7 @@ public sealed class DevelopmentDataSeeder(BancadaDbContext dbContext, UserManage
             new SeedRecipe("Frango assado com limão e alho", "Frango de forno com pele dourada, alho macio e bastante limão.", "Tempere o frango com sal, alho, raspas e suco de limão. Deixe descansar por 30 minutos. Asse em forno alto até dourar, regando com o próprio caldo na metade do tempo.", 80, RecipeDifficulty.Easy, 5, users[1], "https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=1200&q=82", new[] { ("Coxa e sobrecoxa", "1,2", "kg"), ("Limão-siciliano", "2", "unidades"), ("Alho", "6", "dentes"), ("Alecrim", "3", "ramos") }),
             new SeedRecipe("Bolo de fubá com goiabada", "Bolo de miolo úmido com cubos de goiabada que ficam espalhados pela massa.", "Bata ovos, açúcar, leite e óleo. Junte fubá, farinha e fermento. Passe a goiabada em um pouco de farinha, distribua sobre a massa e asse até o palito sair limpo.", 55, RecipeDifficulty.Easy, 10, users[2], "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=82", new[] { ("Fubá", "2", "xícaras"), ("Goiabada", "180", "g"), ("Ovo", "3", "unidades"), ("Leite", "1", "xícara") }),
             new SeedRecipe("Risoto de cogumelos e alho assado", "Cremoso sem excesso de manteiga, com cogumelos bem dourados.", "Asse o alho embrulhado até ficar macio. Doure os cogumelos em fogo alto. Refogue o arroz, adicione o caldo aos poucos e mexa. Finalize com alho assado, cogumelos, queijo e manteiga.", 50, RecipeDifficulty.Medium, 4, users[0], "https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&w=1200&q=82", new[] { ("Arroz arbóreo", "320", "g"), ("Cogumelo paris", "250", "g"), ("Alho", "1", "cabeça"), ("Caldo de legumes", "1,2", "litro") }),
-            new SeedRecipe("Pão de queijo de tabuleiro", "Casquinha firme, centro elástico e preparo sem modelar bolinhas.", "Escalde o polvilho com leite, óleo e sal. Espere amornar, misture ovos e queijo. Espalhe em assadeira untada e asse até crescer e dourar.", 45, RecipeDifficulty.Easy, 12, users[1], "https://images.unsplash.com/photo-1594631661960-34762327295b?auto=format&fit=crop&w=1200&q=82", new[] { ("Polvilho azedo", "400", "g"), ("Queijo meia cura", "250", "g"), ("Leite", "200", "ml"), ("Ovo", "3", "unidades") }),
+            new SeedRecipe("Pão de queijo de tabuleiro", "Casquinha firme, centro elástico e preparo sem modelar bolinhas.", "Escalde o polvilho com leite, óleo e sal. Espere amornar, misture ovos e queijo. Espalhe em assadeira untada e asse até crescer e dourar.", 45, RecipeDifficulty.Easy, 12, users[1], CheeseBreadCoverImageUrl, new[] { ("Polvilho azedo", "400", "g"), ("Queijo meia cura", "250", "g"), ("Leite", "200", "ml"), ("Ovo", "3", "unidades") }),
             new SeedRecipe("Moqueca de banana-da-terra", "Uma moqueca vegetal encorpada, com pimentões e leite de coco.", "Doure rapidamente as bananas. Monte camadas com cebola, tomate e pimentões. Acrescente leite de coco e dendê, tampe e cozinhe em fogo baixo. Finalize com coentro e limão.", 40, RecipeDifficulty.Easy, 4, users[2], "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=82", new[] { ("Banana-da-terra", "4", "unidades"), ("Leite de coco", "400", "ml"), ("Pimentão vermelho", "1", "unidade"), ("Azeite de dendê", "2", "colheres") }),
             new SeedRecipe("Arroz de forno com abóbora e queijo", "Travessa prática para aproveitar arroz pronto e pedaços de abóbora assada.", "Misture o arroz com abóbora, ervas e metade do queijo. Coloque em uma travessa, cubra com o restante do queijo e leve ao forno até borbulhar e dourar.", 35, RecipeDifficulty.Easy, 6, users[0], "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1200&q=82", new[] { ("Arroz cozido", "4", "xícaras"), ("Abóbora cabotiá", "500", "g"), ("Queijo muçarela", "200", "g"), ("Salsinha", "1", "punhado") }),
             new SeedRecipe("Peixe grelhado com vinagrete de feijão-fradinho", "Peixe suculento com um acompanhamento fresco e levemente ácido.", "Cozinhe o feijão até ficar macio sem desmanchar. Misture com tomate, cebola, cheiro-verde e limão. Tempere o peixe e grelhe em frigideira bem quente.", 45, RecipeDifficulty.Medium, 4, users[1], "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=1200&q=82", new[] { ("Filé de peixe branco", "600", "g"), ("Feijão-fradinho", "1", "xícara"), ("Tomate", "2", "unidades"), ("Limão", "1", "unidade") }),
@@ -49,6 +52,21 @@ public sealed class DevelopmentDataSeeder(BancadaDbContext dbContext, UserManage
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await CreateChallengesAsync(now, cancellationToken);
+    }
+
+    private async Task RepairSeededRecipeImagesAsync(CancellationToken cancellationToken)
+    {
+        var recipe = await dbContext.Recipes.SingleOrDefaultAsync(
+            item => item.Title == "Pão de queijo de tabuleiro",
+            cancellationToken);
+
+        if (recipe is null || string.Equals(recipe.CoverImageUrl, CheeseBreadCoverImageUrl, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        recipe.SetCoverImage(CheeseBreadCoverImageUrl, DateTimeOffset.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<ApplicationUser[]> CreateUsersAsync()
