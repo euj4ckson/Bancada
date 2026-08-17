@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Bancada.Api.Tests;
 
@@ -17,6 +18,7 @@ public sealed class BancadaWebApplicationFactory : WebApplicationFactory<Program
     {
         _connection.Open();
         builder.UseEnvironment("Testing");
+        builder.ConfigureLogging(logging => logging.ClearProviders());
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<BancadaDbContext>>();

@@ -33,6 +33,25 @@ public sealed class RecipeWorkflowTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_cookie_supports_cross_site_client_requests()
+    {
+        var email = $"cookie-{Guid.NewGuid():N}@bancada.local";
+        await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Bancada123!", "Cookie"));
+        await _client.PostAsync("/api/auth/logout", null);
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(email, "Bancada123!", true));
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"));
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Contains("bancada.session=", cookie);
+        Assert.Contains("samesite=none", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Another_user_cannot_edit_the_recipe()
     {
         await RegisterAsync(_client, "bia");

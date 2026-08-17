@@ -37,7 +37,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "bancada.session";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
+    // The standalone WebAssembly client and the API are hosted on different sites
+    // (Cloudflare Pages and Render), so authenticated fetch requests are cross-site.
+    options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(14);
