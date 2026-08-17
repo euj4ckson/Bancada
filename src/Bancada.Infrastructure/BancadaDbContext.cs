@@ -2,6 +2,7 @@ using Bancada.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bancada.Infrastructure;
 
@@ -96,5 +97,15 @@ public sealed class BancadaDbContext(DbContextOptions<BancadaDbContext> options)
             entity.HasOne(submission => submission.Recipe).WithMany().HasForeignKey(submission => submission.RecipeId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(submission => submission.UserId).OnDelete(DeleteBehavior.Cascade);
         });
+
+        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            foreach (var property in builder.Model.GetEntityTypes()
+                         .SelectMany(entity => entity.GetProperties())
+                         .Where(property => property.ClrType == typeof(DateTimeOffset)))
+            {
+                property.SetValueConverter(new DateTimeOffsetToBinaryConverter());
+            }
+        }
     }
 }
