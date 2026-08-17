@@ -1,0 +1,6 @@
+@Bancada.Api_HostAddress = http://localhost:5073
+
+GET {{Bancada.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
