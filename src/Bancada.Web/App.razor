@@ -3,19 +3,15 @@
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <Authorizing>
-                    <LayoutView Layout="@typeof(MainLayout)">
-                        <section class="page-shell"><LoadingBlock /></section>
-                    </LayoutView>
+                    <section class="page-shell"><LoadingBlock /></section>
                 </Authorizing>
                 <NotAuthorized>
-                    <LayoutView Layout="@typeof(MainLayout)">
-                        <section class="page-shell narrow empty-state">
-                            <p class="eyebrow">ACESSO RESTRITO</p>
-                            <h1>Entre para continuar</h1>
-                            <p>Esta área faz parte da sua bancada pessoal.</p>
-                            <a class="button primary" href="/entrar">Entrar</a>
-                        </section>
-                    </LayoutView>
+                    <section class="page-shell narrow empty-state">
+                        <p class="eyebrow">ACESSO RESTRITO</p>
+                        <h1>Entre para continuar</h1>
+                        <p>Esta área faz parte da sua bancada pessoal.</p>
+                        <a class="button primary" href="/entrar">Entrar</a>
+                    </section>
                 </NotAuthorized>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
